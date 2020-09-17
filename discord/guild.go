@@ -433,7 +433,7 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 					fallthrough
 				case "sg":
 					guild.SilenceGameMessages = !guild.SilenceGameMessages
-					guild.sendChatMessage(s, m.ChannelID, "Okay! Toggling game messages.", true)
+					guild.sendChatMessage(s, m.ChannelID, fmt.Sprintf("Okay! Toggling game messages to %v", guild.SilenceGameMessages), true)
 					break
 				}
 			}
