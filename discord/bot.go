@@ -281,6 +281,7 @@ func newGuild(moveDeadPlayers bool) func(s *discordgo.Session, m *discordgo.Guil
 			Tracking:             make(map[string]Tracking),
 			TextChannelID:        "",
 			MoveDeadPlayers:      moveDeadPlayers,
+			SilenceGameMessages:  false,
 		}
 	}
 }

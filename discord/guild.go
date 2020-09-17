@@ -37,6 +37,8 @@ type GuildState struct {
 
 	// For voice channel movement
 	MoveDeadPlayers bool
+
+	SilenceGameMessages bool
 }
 
 // TrackedMemberAction struct
@@ -293,27 +295,27 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				args[i] = strings.ToLower(v)
 			}
 			if len(args) == 0 {
-				s.ChannelMessageSend(m.ChannelID, helpResponse())
+				guild.sendChatMessage(s, m.ChannelID, helpResponse(), true)
 			} else {
 				switch args[0] {
 				case "help":
 					fallthrough
 				case "h":
-					s.ChannelMessageSend(m.ChannelID, helpResponse())
+					guild.sendChatMessage(s, m.ChannelID, helpResponse(), true)
 					break
 				case "add":
 					fallthrough
 				case "a":
 					if len(args[1:]) == 0 {
 						//TODO print usage of this command specifically
-						s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
+						guild.sendChatMessage(s, m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage", true)
 					} else {
 						responses := guild.processAddUsersArgs(args[1:])
 						buf := bytes.NewBuffer([]byte("Results:\n"))
 						for name, msg := range responses {
 							buf.WriteString(fmt.Sprintf("`%s`: %s\n", name, msg))
 						}
-						s.ChannelMessageSend(m.ChannelID, buf.String())
+						guild.sendChatMessage(s, m.ChannelID, buf.String(), false)
 					}
 					break
 				case "track":
@@ -321,7 +323,7 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				case "t":
 					if len(args[1:]) == 0 {
 						//TODO print usage of this command specifically
-						s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
+						guild.sendChatMessage(s, m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage", true)
 					} else {
 						// if anything is given in the second slot then we consider that a true
 						forGhosts := len(args[2:]) >= 1
@@ -333,14 +335,14 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 						}
 
 						resp := guild.processTrackChannelArg(channelName, channels, forGhosts)
-						s.ChannelMessageSend(m.ChannelID, resp)
+						guild.sendChatMessage(s, m.ChannelID, resp, false)
 					}
 					break
 				case "list":
 					fallthrough
 				case "l":
 					resp := guild.playerListResponse()
-					s.ChannelMessageSend(m.ChannelID, resp)
+					guild.sendChatMessage(s, m.ChannelID, resp, false) // not sure if we should force this one or not
 					break
 				case "reset":
 					fallthrough
@@ -352,21 +354,21 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 						guild.VoiceStatusCache[i] = v
 					}
 					guild.voiceStatusCacheLock.Unlock()
-					s.ChannelMessageSend(m.ChannelID, "Reset Player List!")
+					guild.sendChatMessage(s, m.ChannelID, "Reset Player List!", false)
 					break
 				case "dead":
 					fallthrough
 				case "d":
 					if len(args[1:]) == 0 {
 						//TODO print usage of this command specifically
-						s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
+						guild.sendChatMessage(s, m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage", true)
 					} else {
 						responses := guild.processMarkAliveUsers(s, args[1:], false)
 						buf := bytes.NewBuffer([]byte("Results:\n"))
 						for name, msg := range responses {
 							buf.WriteString(fmt.Sprintf("`%s`: %s\n", name, msg))
 						}
-						s.ChannelMessageSend(m.ChannelID, buf.String())
+						guild.sendChatMessage(s, m.ChannelID, buf.String(), false)
 					}
 					break
 				case "alive":
@@ -374,20 +376,20 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				case "al":
 					if len(args[1:]) == 0 {
 						//TODO print usage of this command specifically
-						s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
+						guild.sendChatMessage(s, m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage", true)
 					} else {
 						responses := guild.processMarkAliveUsers(s, args[1:], true)
 						buf := bytes.NewBuffer([]byte("Results:\n"))
 						for name, msg := range responses {
 							buf.WriteString(fmt.Sprintf("`%s`: %s\n", name, msg))
 						}
-						s.ChannelMessageSend(m.ChannelID, buf.String())
+						guild.sendChatMessage(s, m.ChannelID, buf.String(), false)
 					}
 					break
 				case "unmuteall":
 					fallthrough
 				case "ua":
-					s.ChannelMessageSend(m.ChannelID, "Forcibly unmuting ALL players!")
+					guild.sendChatMessage(s, m.ChannelID, "Forcibly unmuting ALL players!", false)
 					guild.voiceStatusCacheLock.RLock()
 					for id := range guild.VoiceStatusCache {
 						err := guildMemberMute(s, m.GuildID, id, false)
@@ -400,7 +402,7 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				case "muteall":
 					fallthrough
 				case "ma":
-					s.ChannelMessageSend(m.ChannelID, "Forcibly muting ALL players!")
+					guild.sendChatMessage(s, m.ChannelID, "Forcibly unmuting ALL players!", false)
 					guild.voiceStatusCacheLock.RLock()
 					for id := range guild.VoiceStatusCache {
 						err := guildMemberMute(s, m.GuildID, id, true)
@@ -418,14 +420,20 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				case "b":
 					if len(args[1:]) == 0 {
 						//TODO print usage of this command specifically
-						s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
+						guild.sendChatMessage(s, m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage", true)
 					} else {
 						str, err := guild.processBroadcastArgs(args[1:])
 						if err != nil {
 							log.Println(err)
 						}
-						s.ChannelMessageSend(m.ChannelID, str)
+						guild.sendChatMessage(s, m.ChannelID, str, false)
 					}
+					break
+				case "silencegame":
+					fallthrough
+				case "sg":
+					guild.SilenceGameMessages = !guild.SilenceGameMessages
+					guild.sendChatMessage(s, m.ChannelID, "Okay! Toggling game messages.", true)
 					break
 				}
 			}
@@ -612,4 +620,11 @@ func (guild *GuildState) findVoiceChannel(forGhosts bool) (Tracking, error) {
 	}
 
 	return Tracking{}, fmt.Errorf("No voice channel found forGhosts: %v", forGhosts)
+}
+
+func (guild *GuildState) sendChatMessage(s *discordgo.Session, channelID string, message string, force bool) {
+	if guild.SilenceGameMessages && !force {
+		return
+	}
+	s.ChannelMessageSend(channelID, message)
 }
