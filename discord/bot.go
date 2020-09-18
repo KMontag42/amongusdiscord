@@ -68,9 +68,6 @@ func MakeAndStartBot(token string, moveDeadPlayers bool) {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 
-	//if channel != "" {
-	//	dg.ChannelMessageSend(channel, "Bot is Online!")
-	//}
 	AllGuilds = make(map[string]*GuildState)
 	AllConns = make(map[string]string)
 
@@ -83,10 +80,6 @@ func MakeAndStartBot(token string, moveDeadPlayers bool) {
 	go discordListener(dg, gamePhaseUpdateChannel, playerUpdateChannel)
 
 	<-sc
-
-	//if channel != "" {
-	//	dg.ChannelMessageSend(channel, "Bot is going Offline!")
-	//}
 
 	dg.Close()
 }
