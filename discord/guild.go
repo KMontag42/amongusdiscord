@@ -250,7 +250,6 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 	}
 
 	//TODO This should check VOICE channels, not TEXT channels
-	//if guild.isTracked(m.ChannelID) {
 	contents := m.Content
 	if strings.HasPrefix(contents, CommandPrefix) {
 		args := strings.Split(contents, " ")[1:]
@@ -266,21 +265,6 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 			case "h":
 				s.ChannelMessageSend(m.ChannelID, helpResponse())
 				break
-			//case "add":
-			//	fallthrough
-			//case "a":
-			//	if len(args[1:]) == 0 {
-			//		//TODO print usage of this command specifically
-			//		s.ChannelMessageSend(m.ChannelID, "You used this command incorrectly! Please refer to `.au help` for proper command usage")
-			//	} else {
-			//		responses := guild.processAddUsersArgs(args[1:])
-			//		buf := bytes.NewBuffer([]byte("Results:\n"))
-			//		for name, msg := range responses {
-			//			buf.WriteString(fmt.Sprintf("`%s`: %s\n", name, msg))
-			//		}
-			//		s.ChannelMessageSend(m.ChannelID, buf.String())
-			//	}
-			//	break
 			case "track":
 				fallthrough
 			case "t":
@@ -352,7 +336,6 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				s.ChannelMessageSend(m.ChannelID, "Sorry, I didn't understand that command! Please see `.au help` for commands")
 			}
 		}
-		//}
 	}
 }
 

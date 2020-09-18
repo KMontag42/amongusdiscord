@@ -1,3 +1,9 @@
-* Dead Player Voice Channel
-** TODO testing
-** TODO delete this file
+* Code Cleanup
+** DONE delete all commented Code
+** DONE remove all dead variables
+** TODO make utility functions where possible
+- message sending and handling should be in it's own package
+- anything related to the game should be in the game package
+- 
+*** TODO unit test whenever it is feasible
+** TODO re-org guild.go

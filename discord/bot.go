@@ -26,13 +26,6 @@ const AmongUsDefaultColor = "Cyan"
 // CommandPrefix const
 const CommandPrefix = ".au"
 
-// var VoiceStatusCache = make(map[string]UserData)
-// var VoiceStatusCacheLock = sync.RWMutex{}
-//
-// var GameState = game.GameState{Phase: game.LOBBY}
-// var GameStateLock = sync.RWMutex{}
-//
-
 // GameDelays struct
 type GameDelays struct {
 	GameStartDelay           int
@@ -151,15 +144,7 @@ func socketioServer(gamePhaseUpdateChannel chan<- game.GamePhaseUpdate, playerUp
 				log.Println("This websocket is not associated with any guilds")
 			}
 		}
-		//s.SetContext(msg)
-		//s.Emit("hi", "status "+msg)
 	})
-	//server.OnEvent("/", "bye", func(s socketio.Conn) string {
-	//	last := s.Context().(string)
-	//	s.Emit("bye", last)
-	//	s.Close()
-	//	return last
-	//})
 	server.OnError("/", func(s socketio.Conn, e error) {
 		fmt.Println("meet error:", e)
 	})
@@ -180,14 +165,9 @@ func discordListener(dg *discordgo.Session, phaseUpdateChannel <-chan game.GameP
 		case phaseUpdate := <-phaseUpdateChannel:
 			log.Printf("Received PhaseUpdate message for guild %s\n", phaseUpdate.GuildID)
 			if guild, ok := AllGuilds[phaseUpdate.GuildID]; ok {
-				//log.Printf("Unmarshalled state object: %s\n", newState.ToString())
 				switch phaseUpdate.Phase {
 				case game.LOBBY:
 					log.Println("Detected transition to lobby")
-					//if ExclusiveChannelId != "" {
-					//	dg.ChannelMessageSend(ExclusiveChannelId, fmt.Sprintf("Game over! Unmuting players!"))
-					//}
-					//Loop through and reset players (game over = everyone alive again)
 
 					guild.AmongUsDataLock.Lock()
 					for i := range guild.AmongUsData {
@@ -208,9 +188,6 @@ func discordListener(dg *discordgo.Session, phaseUpdateChannel <-chan game.GameP
 					} else if guild.GamePhase == game.DISCUSS {
 						delay = guild.delays.GameResumeDelay
 					}
-					//if ExclusiveChannelId != "" {
-					//	dg.ChannelMessageSend(ExclusiveChannelId, fmt.Sprintf("Game starting; muting players in %d second(s)!", delay))
-					//}
 					guild.GamePhaseLock.RUnlock()
 
 					time.Sleep(time.Second * time.Duration(delay))
@@ -221,9 +198,6 @@ func discordListener(dg *discordgo.Session, phaseUpdateChannel <-chan game.GameP
 					guild.GamePhaseLock.Unlock()
 				case game.DISCUSS:
 					log.Println("Detected transition to discussion")
-					//if ExclusiveChannelId != "" {
-					//	dg.ChannelMessageSend(ExclusiveChannelId, fmt.Sprintf("Starting discussion; unmuting alive players in %d second(s)!", DiscussStartDelay))
-					//}
 					time.Sleep(time.Second * time.Duration(guild.delays.DiscussStartDelay))
 					guild.GamePhaseLock.Lock()
 					guild.GamePhase = phaseUpdate.Phase
