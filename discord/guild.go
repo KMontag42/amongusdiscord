@@ -71,7 +71,6 @@ func (guild *GuildState) handleTrackedMembers(dg *discordgo.Session, inGame bool
 
 	updateMade := false
 	for _, voiceState := range g.VoiceStates {
-		//guild.UserDataLock.Lock()
 		if userData, ok := guild.UserData[voiceState.UserID]; ok {
 			shouldMute, shouldDeaf := getVoiceStateChanges(guild, userData, voiceState.ChannelID)
 
@@ -98,7 +97,6 @@ func (guild *GuildState) handleTrackedMembers(dg *discordgo.Session, inGame bool
 				}
 			}
 		}
-		//guild.UserDataLock.Unlock()
 	}
 	if updateMade {
 		log.Println("Updating state message")
@@ -154,51 +152,6 @@ func (guild *GuildState) voiceStateChange(s *discordgo.Session, m *discordgo.Voi
 	}
 }
 
-// TODO this probably deals with too much direct state-changing;
-//probably want to bubble it up to some higher authority?
-func (guild *GuildState) handleReactionGameStartAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
-	//g, err := s.State.Guild(guild.ID)
-	//if err != nil {
-	//	log.Println(err)
-	//}
-
-	if guild.GameStateMessage != nil {
-
-		//verify that the user is reacting to the state/status message
-		if IsUserReactionToStateMsg(m, guild.GameStateMessage) {
-			for color, e := range guild.StatusEmojis[true] {
-				if e.ID == m.Emoji.ID {
-					log.Printf("Player %s reacted with color %s", m.UserID, GetColorStringForInt(color))
-
-					//pair up the discord user with the relevant in-game data, matching by the color
-					_, matched := guild.matchByColor(m.UserID, GetColorStringForInt(color), guild.AmongUsData)
-
-					//then remove the player's reaction if we matched, or if we didn't
-					err := s.MessageReactionRemove(m.ChannelID, m.MessageID, e.FormatForReaction(), m.UserID)
-					if err != nil {
-						log.Println(err)
-					}
-
-					if matched {
-						guild.handleGameStateMessage(s)
-
-						//NOTE: Don't remove the bot's reaction; more likely to misclick when the emojis move, and it doesn't
-						//allow users to change their color pairing if they messed up
-
-						//remove the bot's reaction
-						//err := s.MessageReactionRemove(m.ChannelID, m.MessageID, e.FormatForReaction(), guild.GameStateMessage.Author.ID)
-						//if err != nil {
-						//	log.Println(err)
-						//}
-					}
-					break
-				}
-			}
-
-		}
-	}
-}
-
 // IsUserReactionToStateMsg func
 func IsUserReactionToStateMsg(m *discordgo.MessageReactionAdd, sm *discordgo.Message) bool {
 	return m.ChannelID == sm.ChannelID && m.MessageID == sm.ID && m.UserID != sm.Author.ID
@@ -225,21 +178,8 @@ func (guild *GuildState) isTracked(channelID string) bool {
 	return false
 }
 
-func (guild *GuildState) findVoiceChannel(forGhosts bool) (Tracking, error) {
-	for _, v := range guild.Tracking {
-		if v.forGhosts == forGhosts {
-			return v, nil
-		}
-	}
-
-	return Tracking{}, fmt.Errorf("No voice channel found forGhosts: %v", forGhosts)
-}
-
 //first bool is whether the update is truly an update, 2nd bool is if the update is "sensitive" (leaks info to players)
 func (guild *GuildState) updateCachedAmongUsData(update game.Player) (bool, bool) {
-	//guild.AmongUsDataLock.Lock()
-	//defer guild.AmongUsDataLock.Unlock()
-
 	if _, ok := guild.AmongUsData[update.Name]; !ok {
 		guild.AmongUsData[update.Name] = &AmongUserData{
 			Color:   update.Color,

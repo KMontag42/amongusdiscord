@@ -2,17 +2,10 @@ package discord
 
 import (
 	"log"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
-
-//func handlePlayerListMessage(guild *GuildState, s *discordgo.Session, m *discordgo.MessageCreate) {
-//	// if we want to keep locking we can do something like this in the handlers
-//	guild.UserDataLock.RLock()
-//	handleGameStateMessage(guild, s)
-//	guild.UserDataLock.RUnlock()
-//	//sendMessage(s, m.ChannelID, message)
-//}
 
 func (guild *GuildState) handleGameEndMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// unmute all players
@@ -37,17 +30,64 @@ func (guild *GuildState) handleGameStartMessage(s *discordgo.Session, m *discord
 	}
 }
 
-// this will be called every game phase update
-// i don't think we will have `m` where we need it, so potentially rethink it...?
 func (guild *GuildState) handleGameStateMessage(s *discordgo.Session) {
-	//guild.UserDataLock.Lock()
-	//defer guild.UserDataLock.Unlock()
-
 	if guild.GameStateMessage == nil {
 		//log.Println("Game State Message is scuffed, try .au start again!")
 		return
 	}
 	editMessage(s, guild.GameStateMessage.ChannelID, guild.GameStateMessage.ID, gameStateResponse(guild))
+}
+
+// TODO this probably deals with too much direct state-changing;
+//probably want to bubble it up to some higher authority?
+func (guild *GuildState) handleReactionGameStartAdd(s *discordgo.Session, m *discordgo.MessageReactionAdd) {
+	if guild.GameStateMessage != nil {
+
+		//verify that the user is reacting to the state/status message
+		if IsUserReactionToStateMsg(m, guild.GameStateMessage) {
+			for color, e := range guild.StatusEmojis[true] {
+				if e.ID == m.Emoji.ID {
+					log.Printf("Player %s reacted with color %s", m.UserID, GetColorStringForInt(color))
+
+					//pair up the discord user with the relevant in-game data, matching by the color
+					_, matched := guild.matchByColor(m.UserID, GetColorStringForInt(color), guild.AmongUsData)
+
+					//then remove the player's reaction if we matched, or if we didn't
+					err := s.MessageReactionRemove(m.ChannelID, m.MessageID, e.FormatForReaction(), m.UserID)
+					if err != nil {
+						log.Println(err)
+					}
+
+					if matched {
+						guild.handleGameStateMessage(s)
+					}
+					break
+				}
+			}
+
+		}
+	}
+}
+
+func (guild *GuildState) handlePlayerAddMessage(s *discordgo.Session, m *discordgo.MessageCreate, name string, color string) bool {
+	// we need to determine if it is a valid color
+	// then we need to matchByColor
+	if strings.HasPrefix(name, "<@!") && strings.HasSuffix(name, ">") && IsColorString(color) {
+		//strip the special characters off front and end
+		idLookup := name[3 : len(name)-1]
+		g, err := s.State.Guild(guild.ID)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, member := range g.Members {
+			if idLookup == member.User.Username {
+				_, matched := guild.matchByColor(member.User.ID, color, guild.AmongUsData)
+				return matched
+			}
+		}
+	}
+
+	return false
 }
 
 // sendMessage provides a single interface to send a message to a channel via discord

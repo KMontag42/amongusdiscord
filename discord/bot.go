@@ -373,7 +373,6 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 					guild.handleGameStateMessage(s)
 				}
 				break
-
 			case "link":
 				fallthrough
 			case "l":
@@ -410,7 +409,6 @@ func (guild *GuildState) handleMessageCreate(s *discordgo.Session, m *discordgo.
 				break
 			default:
 				s.ChannelMessageSend(m.ChannelID, "Sorry, I didn't understand that command! Please see `.au help` for commands")
-
 			}
 			//TODO allow a "less strict" mode that only deletes .au commands, not all messages
 		}

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
 	"log"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 
 	"github.com/denverquane/amongusdiscord/game"
 )
@@ -28,7 +29,6 @@ func (guild *GuildState) playerListResponse(users map[string]UserData) string {
 
 	sorted := make([]string, 12)
 
-	//buf.WriteString("Player List:\n")
 	for _, player := range users {
 		if player.auData != nil {
 			emoji := guild.StatusEmojis[player.auData.IsAlive][player.auData.Color]
@@ -90,25 +90,6 @@ func (guild *GuildState) linkPlayerResponse(args []string, allAuData map[string]
 	return fmt.Sprintf(":x: No in-game name was found matching %s!\n", inGameName)
 }
 
-func (guild *GuildState) matchByColor(userID, text string, allAuData map[string]*AmongUserData) (string, bool) {
-	//guild.AmongUsDataLock.Lock()
-	//defer guild.AmongUsDataLock.Unlock()
-
-	for _, auData := range allAuData {
-		if GetColorStringForInt(auData.Color) == strings.ToLower(text) {
-			if user, ok := guild.UserData[userID]; ok {
-				user.auData = auData //point to the single copy in memory
-				//user.visualTrack = true
-				guild.UserData[userID] = user
-				log.Printf("Linked %s to %s", userID, user.auData.ToString())
-				return fmt.Sprintf("Successfully linked player via Color!"), true
-			}
-			return fmt.Sprintf("No user found with userID %s", userID), false
-		}
-	}
-	return fmt.Sprintf(":x: No in-game player data was found matching that color!\n"), false
-}
-
 // TODO:
 func gameStateResponse(guild *GuildState) string {
 	// we need to generate the messages based on the state of the game
@@ -123,7 +104,6 @@ func gameStateResponse(guild *GuildState) string {
 func lobbyMessage(g *GuildState) string {
 	buf := bytes.NewBuffer([]byte{})
 
-	//buf.WriteString("Lobby is open!\n")
 	if g.LinkCode != "" {
 		alarmFormatted := ":x:"
 		if v, ok := g.SpecialEmojis["alarm"]; ok {
@@ -167,13 +147,9 @@ func gamePlayMessage(guild *GuildState) string {
 
 	buf.WriteString("Game is running!\n\n")
 	// add the player list
-	//guild.UserDataLock.Lock()
 	buf.WriteString(guild.playerListResponse(guild.UserData))
-	//guild.UserDataLock.Unlock()
 
-	//guild.AmongUsDataLock.RLock()
 	buf.WriteString(fmt.Sprintf("\nCurrent Phase: **%s**\n", guild.GamePhase.ToString()))
-	//guild.AmongUsDataLock.RUnlock()
 
 	return buf.String()
 }
